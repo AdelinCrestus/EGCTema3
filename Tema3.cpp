@@ -29,6 +29,7 @@ void Tema3::Init()
     const string sourceTextureDir = PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema3", "textures");
     lastZ = lastX = lastY = 0;
     angularStepSkier = 0;
+    timerNewObjects = 1;
     /*
     // Load textures
     {
@@ -199,6 +200,33 @@ void Tema3::Init()
         meshes[mesh->GetMeshID()] = mesh;
     }
 
+    //Load cone
+    {
+        Mesh* mesh = new Mesh("cone");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema3"), "cone.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+    }
+
+    { //leaves texture
+        Texture2D* texture = new Texture2D();
+        
+        texture->Load2D(PATH_JOIN(sourceTextureDir, "tree_leaves2.jpg").c_str(), GL_REPEAT);
+        mapTextures["leaves"] = texture;
+    }
+
+    { // Grey wood texture
+        Texture2D* texture = new Texture2D();
+        texture->Load2D(PATH_JOIN(sourceTextureDir, "greywood_texture.jpg").c_str(), GL_REPEAT);
+        mapTextures["greywood"] = texture;
+    }
+
+    { //random texture
+        Texture2D* texture = new Texture2D();
+        texture = CreateRandomTexture(25, 25);
+        mapTextures["random"] = texture;
+
+    }
+
     scaleXBody = 0.2f;
     scaleYBody = 0.4f;
     scaleZBody = 0.2f;
@@ -206,7 +234,12 @@ void Tema3::Init()
     scaleYSKIs = 0.0001f;
     scaleZSKIs = 1.0f;
 
+    scaleCone = 0.5f;
+    scaleGift = 0.25f;
+    scaleTrunk = 0.2f;
     angleSlope = RADIANS(30);
+
+   
 
     translateX = translateY = translateZ = 0;
     timeY = timeX = 0;
@@ -215,9 +248,17 @@ void Tema3::Init()
     //GetSceneCamera()->SetRotation(glm::quat(eulerAngles));
     //GetSceneCamera()->m_transform->SetLocalPosition();
     //GetSceneCamera()->m_transform->RotateLocalOX(RADIANS(-30));
-    GetSceneCamera()->m_transform->SetWorldPosition(glm::vec3(0, 4.0f/3.0f, 8.0f/ sqrt(3)));
-    GetSceneCamera()->m_transform->SetWorldRotation(glm::vec3(-30, 0, 0));
+    GetSceneCamera()->m_transform->SetWorldPosition(glm::vec3(0, 3, 10.0f/ sqrt(3)));
+    GetSceneCamera()->m_transform->SetWorldRotation(glm::vec3(-40, 0, 0));
     GetSceneCamera()->Update();
+    autoCamera = true;
+
+    
+    time = 0;
+    last_time_object = 0;
+    blocat = false;
+
+
 }
 
 
@@ -286,31 +327,59 @@ void Tema3::Update(float deltaTimeSeconds)
     }
     */
     //Render snow
-    timeY += deltaTimeSeconds;
-    translateZ += deltaTimeSeconds;
+    if (!blocat)
+    {
+        timeY += deltaTimeSeconds;
+        translateZ += deltaTimeSeconds;
+        time += deltaTimeSeconds;
+    }
+
+    if (time - last_time_object > timerNewObjects)
+    {
+        last_time_object = time;
+        float translateZObject = translateZ + 6.5;
+        int randomNumber = rand();
+        if (randomNumber % 4 == 0)
+        {
+            pos_trees.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+        }
+        else if (randomNumber % 4 == 1)
+        {
+            pos_gifts.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+        }
+        else if (randomNumber % 4 == 2)
+        {
+            pos_lighting_poles.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+        }
+        else if (randomNumber % 4 == 3)
+        {
+            pos_rocks.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+        }
+    }
+    
     
     
     {
-        
-    translateY = -translateZ * tan(angleSlope);
-    glm::mat4 modelMatrix = glm::translate(glm::mat4(1), glm::vec3(translateX, translateY , translateZ));
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
-    modelMatrix = glm::rotate(modelMatrix, angleSlope, glm::vec3(1, 0, 0));
+        translateY = -translateZ * tan(angleSlope);
+        glm::mat4 modelMatrix = glm::translate(glm::mat4(1), glm::vec3(translateX, translateY , translateZ));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
+        modelMatrix = glm::rotate(modelMatrix, angleSlope, glm::vec3(1, 0, 0));
     
-    quad = 1;
-    RenderSimpleMesh(meshes["quad_snow"], shaders["Tema3Shader"], modelMatrix, mapTextures["snow"]);
-    quad = 0;
-    
+        quad = 1;
+        RenderSimpleMesh(meshes["quad_snow"], shaders["Tema3Shader"], modelMatrix, mapTextures["snow"]);
+        quad = 0;
     }
 
+    printf(" %f\n", angularStepSkier);
     
     //Render skier
     {
-        translateX += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
-        timeX += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
+        float translateXNext = translateX;
+        translateXNext += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
+        //timeX += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
         if (translateX == 0)
         {
-            angleGoDown = angleSlope;
+           angleGoDown = angleSlope;
         }
         else
         {
@@ -319,7 +388,37 @@ void Tema3::Update(float deltaTimeSeconds)
             angleGoDown = acos(glm::dot(dir, glm::normalize(glm::vec3(dir.x, 0, dir.z))));
             angleRotateDown = acos(glm::dot(dir, glm::normalize(glm::vec3(0, dir.y, dir.z))));
         }
-        glm::mat4 modelMatrixSkier = glm::translate(glm::mat4(1), glm::vec3(translateX, -translateZ * tan(angleSlope) + 0.2f, translateZ));
+        bool gasit = false;
+        for (glm::vec3 vec : pos_trees)
+        {
+            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody + scaleTrunk) * sqrt(2))
+            {
+                gasit = true;
+            }     
+        }
+
+        for (glm::vec3 vec : pos_lighting_poles)
+        {
+            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody  + 0.15 ) * sqrt(2))
+            {
+                gasit = true;
+            }
+        }
+            if (gasit)
+            {
+                blocat = true;
+            }
+            else
+            {
+                blocat = false;
+            }
+        
+        
+            translateX = translateXNext;
+            timeX += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
+        
+
+        glm::mat4 modelMatrixSkier = glm::translate(glm::mat4(1), glm::vec3(translateX, -translateZ * tan(angleSlope) + 0.18f, translateZ));
         modelMatrixSkier = glm::rotate(modelMatrixSkier, angularStepSkier, glm::vec3(0, 1, 0));
         //modelMatrixSkier = glm::rotate(modelMatrixSkier,angleRotateDown, glm::vec3(0,0,1)) ;
         modelMatrixSkier = glm::rotate(modelMatrixSkier,angleSlope, glm::vec3(1,0,0)) ;
@@ -341,8 +440,96 @@ void Tema3::Update(float deltaTimeSeconds)
 
         RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixSKIR, mapTextures["romania"]);
     }
-    GetSceneCamera()->m_transform->Move(glm::vec3(-lastX + translateX, - lastY + translateY, - lastZ + translateZ));
-    GetSceneCamera()->Update();
+
+
+    //Render trees
+    {
+        int i = 0;
+        for (glm::vec3 vec : pos_trees)
+        {
+            if (translateZ - vec.z < 6.5 && fabs(translateX - vec.x) < 6.5)
+            {
+                glm::mat4 modelMatrixTree = glm::translate(glm::mat4(1), vec);
+                glm::mat4 modelMatrixTreeCone = glm::translate(modelMatrixTree, glm::vec3(0, 1.5, 0));
+                modelMatrixTreeCone = glm::scale(modelMatrixTreeCone, glm::vec3(scaleCone, scaleCone, scaleCone));
+                RenderSimpleMesh(meshes["cone"], shaders["Tema3Shader"], modelMatrixTreeCone, mapTextures["leaves"]);
+
+                glm::mat4 modelMatrixTrunk = glm::translate(modelMatrixTree, glm::vec3(0, 0.5, 0));
+                   modelMatrixTrunk  = glm::scale(modelMatrixTrunk, glm::vec3(scaleTrunk, 1, scaleTrunk));
+                RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixTrunk, mapTextures["romania"]);
+            }
+            else
+            {
+                  pos_trees.erase(pos_trees.begin() + i);
+            }
+            i++;
+        }
+    }
+
+    {//Render gifts
+        int i = 0;
+        for (glm::vec3 vec : pos_gifts)
+        {
+            if (translateZ - vec.z < 6.5 && fabs(translateX - vec.x) < 6.5)
+            {
+                glm::mat4 modelMatrixGift = glm::translate(glm::mat4(1), vec);
+                modelMatrixGift = glm::translate(modelMatrixGift, glm::vec3(0, scaleGift * 0.5, 0));  // ridicam cu jum de latura * scale
+                modelMatrixGift = glm::rotate(modelMatrixGift, angleSlope, glm::vec3(1, 0, 0));
+                modelMatrixGift = glm::scale(modelMatrixGift, glm::vec3(scaleGift, scaleGift, scaleGift));
+                RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixGift, mapTextures["random"]);
+            }
+            else
+            {
+                pos_gifts.erase(pos_gifts.begin() + i);
+            }
+            i++;
+        }
+    }
+
+    {// Render lighting_poles
+        int i = 0;
+        for (glm::vec3 vec : pos_lighting_poles)
+        {
+            if (translateZ - vec.z < 6.5 && fabs(translateX - vec.x) < 6.5)
+            {
+                glm::mat4 modelMatrixPoles = glm::translate(glm::mat4(1),vec); 
+                glm::mat4 modelMatrixPolesVert = glm::translate(modelMatrixPoles, glm::vec3(0, 0.5 * 1.25, 0)); // ridicam cu jum de latura * factor scalare
+                modelMatrixPolesVert = glm::scale(modelMatrixPolesVert, glm::vec3(0.15, 1.25, 0.15));
+                RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesVert, mapTextures["greywood"]);
+
+                glm::mat4 modelMatrixPolesHoriz = glm::translate(modelMatrixPoles, glm::vec3(0, 1.25 + 0.075, 0)); // ridicam barna oriz cu cat are h cea verticala + jumatate din grosimea celei orizontale
+                modelMatrixPolesHoriz = glm::rotate(modelMatrixPolesHoriz, RADIANS(90), glm::vec3(0, 0, 1));
+                modelMatrixPolesHoriz = glm::scale(modelMatrixPolesHoriz, glm::vec3(0.15, 1, 0.15));
+                RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesHoriz, mapTextures["greywood"]);
+
+
+            }
+            else
+            {
+                pos_lighting_poles.erase(pos_lighting_poles.begin() + i);
+            }
+            i++;
+        }
+    }
+
+    {// Intersection with gifts
+        int i = 0;
+        for (glm::vec3 vec : pos_gifts)
+        {
+            if (distance(glm::vec3(translateX, 0, translateZ), glm::vec3(vec.x, 0, vec.z)) < scaleGift/2 + scaleXBody/2)
+            {
+                pos_gifts.erase(pos_gifts.begin() + i);
+            }
+            i++;
+        }
+    }
+
+      
+    if (autoCamera)
+    {
+        GetSceneCamera()->m_transform->Move(glm::vec3(-lastX + translateX, -lastY + translateY, -lastZ + translateZ));
+        GetSceneCamera()->Update();
+    }
     lastZ = translateZ;
     lastX = translateX;
     lastY = translateY;
@@ -485,33 +672,61 @@ void Tema3::OnInputUpdate(float deltaTime, int mods)
         forward = glm::normalize(glm::vec3(forward.x, 0, forward.z));
     }*/
     
-
+    
     if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        if (window->KeyHold(GLFW_KEY_W))
-        {
-            timeY += deltaTime;
-            translateZ += deltaTime;
-        }
-
+        
         if (window->KeyHold(GLFW_KEY_A))
         {
-            timeX -= deltaTime;
-            translateX -= deltaTime;
+            //timeX -= deltaTime;
         }
 
         if (window->KeyHold(GLFW_KEY_D))
         {
-            timeX += deltaTime;
-            translateX += deltaTime;
+            //timeX += deltaTime;
         }
     }
+   /* float translateXNext = translateX;
+    bool stg = false;
+    int i = 0;
+    bool gasit = false;
+    for (glm::vec3 vec : pos_trees)
+    {
+        if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < scaleXBody + scaleTrunk)
+        {
+            gasit = true;
+        }
+    }
+    if (gasit)
+    {
+        blocat = true;
+    }
+
+    if (!gasit)
+    {
+        blocat = false;
+        translateX = translateXNext;
+        if (stg)
+        {
+            timeX -= deltaTime;
+        }
+        else
+        {
+            timeX += deltaTime;
+        }
+    }
+    */
 }
 
 
 void Tema3::OnKeyPress(int key, int mods)
 {
     // Add key press event
+
+    if (key == GLFW_KEY_M)
+    {
+        autoCamera = !autoCamera;
+    }
 }
 
 

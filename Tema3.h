@@ -50,6 +50,20 @@ namespace m1
         glm::ivec2 resolution;
         float angleGoDown, angleRotateDown;
         float angularStepSkier;
+        bool autoCamera;
+
+        glm::vector<glm::vec3> pos_trees;
+        glm::vector<glm::vec3> pos_gifts;
+        glm::vector<glm::vec3> pos_lighting_poles;
+        glm::vector<glm::vec3> pos_rocks;
+        float time;
+        float last_time_object;
+
+        float scaleCone;
+        float scaleGift;
+        int timerNewObjects;
+        bool blocat;
+        float scaleTrunk;
     };
 
 }   // namespace m1
