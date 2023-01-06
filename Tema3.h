@@ -64,6 +64,11 @@ namespace m1
         int timerNewObjects;
         bool blocat;
         float scaleTrunk;
+        float material_kd, material_ks;
+        int material_shininess;
+        int N;
+        glm::vector<glm::vec3> positions_objects;
+        glm::vector<glm::vec3> color_light_objects;
     };
 
 }   // namespace m1

@@ -257,7 +257,12 @@ void Tema3::Init()
     time = 0;
     last_time_object = 0;
     blocat = false;
+    material_kd = 0.3;
+    material_ks = 0.3;
+    material_shininess = 30;
 
+    positions_objects.push_back(glm::vec3(-10, -10, -10));
+    color_light_objects.push_back(glm::vec3(0, 0, 0));
 
 }
 
@@ -339,21 +344,28 @@ void Tema3::Update(float deltaTimeSeconds)
         last_time_object = time;
         float translateZObject = translateZ + 6.5;
         int randomNumber = rand();
+        glm::vec3 poz = glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject);
         if (randomNumber % 4 == 0)
         {
-            pos_trees.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+            pos_trees.push_back(poz);
         }
         else if (randomNumber % 4 == 1)
         {
-            pos_gifts.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+            pos_gifts.push_back(poz);
         }
         else if (randomNumber % 4 == 2)
         {
-            pos_lighting_poles.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+            pos_lighting_poles.push_back(poz);
         }
         else if (randomNumber % 4 == 3)
         {
-            pos_rocks.push_back(glm::vec3(rand() % 13 - 6.5f + translateX, -translateZObject * tan(angleSlope), translateZObject));
+            pos_rocks.push_back(poz);
+        }
+
+        if (randomNumber % 4 < 2)
+        {
+            positions_objects.push_back(poz);
+            color_light_objects.push_back(glm::vec3(rand() % 71 / 100.0f, rand() % 71 / 100.0f, rand() % 71 / 100.0f));
         }
     }
     
@@ -370,7 +382,6 @@ void Tema3::Update(float deltaTimeSeconds)
         quad = 0;
     }
 
-    printf(" %f\n", angularStepSkier);
     
     //Render skier
     {
@@ -461,6 +472,14 @@ void Tema3::Update(float deltaTimeSeconds)
             else
             {
                   pos_trees.erase(pos_trees.begin() + i);
+                  for (int k = 1; k < positions_objects.size(); k++)
+                  {
+                      if (vec == positions_objects.at(k))
+                      {
+                          positions_objects.erase(positions_objects.begin() + k);
+                          color_light_objects.erase(color_light_objects.begin() + k);
+                      }
+                  }
             }
             i++;
         }
@@ -481,6 +500,14 @@ void Tema3::Update(float deltaTimeSeconds)
             else
             {
                 pos_gifts.erase(pos_gifts.begin() + i);
+                for (int k = 1; k < positions_objects.size(); k++)
+                {
+                    if (vec == positions_objects.at(k))
+                    {
+                        positions_objects.erase(positions_objects.begin() + k);
+                        color_light_objects.erase(color_light_objects.begin() + k);
+                    }
+                }
             }
             i++;
         }
@@ -519,6 +546,14 @@ void Tema3::Update(float deltaTimeSeconds)
             if (distance(glm::vec3(translateX, 0, translateZ), glm::vec3(vec.x, 0, vec.z)) < scaleGift/2 + scaleXBody/2)
             {
                 pos_gifts.erase(pos_gifts.begin() + i);
+                for (int k = 1; k < positions_objects.size(); k++)
+                {
+                    if (vec == positions_objects.at(k))
+                    {
+                        positions_objects.erase(positions_objects.begin() + k);
+                        color_light_objects.erase(color_light_objects.begin() + k);
+                    }
+                }
             }
             i++;
         }
@@ -541,7 +576,7 @@ void Tema3::Update(float deltaTimeSeconds)
 
 void Tema3::FrameEnd()
 {
-    DrawCoordinateSystem();
+    //DrawCoordinateSystem();
 }
 
 
@@ -576,6 +611,28 @@ void Tema3::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & model
 
     loc = glGetUniformLocation(shader->program, "timeX");
     glUniform1f(loc, timeX);
+
+    loc = glGetUniformLocation(shader->program, "material_kd");
+    glUniform1f(loc, material_kd);
+
+    loc = glGetUniformLocation(shader->program, "material_ks");
+    glUniform1f(loc, material_ks);
+
+    loc = glGetUniformLocation(shader->program, "material_shininess");
+    glUniform1i(loc, material_shininess);
+
+
+    glm::vec3 eyePosition = GetSceneCamera()->m_transform->GetWorldPosition();
+    int eye_position = glGetUniformLocation(shader->program, "eye_position");
+    glUniform3f(eye_position, eyePosition.x, eyePosition.y, eyePosition.z);
+
+    loc = glGetUniformLocation(shader->program, "positions");
+    glUniform3fv(loc, 150, glm::value_ptr(positions_objects.at(0)));
+    loc = glGetUniformLocation(shader->program, "N");
+    glUniform1i(loc, positions_objects.size());
+
+    loc = glGetUniformLocation(shader->program, "colors");
+    glUniform3fv(loc, 150, glm::value_ptr(color_light_objects.at(0)));
 
     if (texture1)
     {
@@ -782,3 +839,4 @@ void Tema3::OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY)
 void Tema3::OnWindowResize(int width, int height)
 {
 }
+
