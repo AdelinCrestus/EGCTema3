@@ -69,6 +69,8 @@ namespace m1
         int N;
         glm::vector<glm::vec3> positions_objects;
         glm::vector<glm::vec3> color_light_objects;
+        glm::vec3 spotPos;
+        bool blocat2;
     };
 
 }   // namespace m1

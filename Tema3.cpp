@@ -30,105 +30,7 @@ void Tema3::Init()
     lastZ = lastX = lastY = 0;
     angularStepSkier = 0;
     timerNewObjects = 1;
-    /*
-    // Load textures
-    {
-        Texture2D* texture = new Texture2D();
-        texture->Load2D(PATH_JOIN(sourceTextureDir, "grass_bilboard.png").c_str(), GL_REPEAT);
-        mapTextures["grass"] = texture;
-    }
-
-    {
-        Texture2D* texture = new Texture2D();
-        texture->Load2D(PATH_JOIN(sourceTextureDir, "crate.jpg").c_str(), GL_REPEAT);
-        mapTextures["crate"] = texture;
-    }
-
-    {
-        Texture2D* texture = new Texture2D();
-        texture->Load2D(PATH_JOIN(sourceTextureDir, "earth.png").c_str(), GL_CLAMP_TO_BORDER);
-        mapTextures["earth"] = texture;
-    }
-
-    {
-        Texture2D* texture = new Texture2D();
-        texture->Load2D(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "vegetation", "bamboo", "bamboo.png").c_str(), GL_REPEAT);
-        mapTextures["bamboo"] = texture;
-    }
-
-    {
-        mapTextures["random"] = CreateRandomTexture(25, 25);
-    }
-
-    // Load meshes
-    {
-        Mesh* mesh = new Mesh("box");
-        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "box.obj");
-        meshes[mesh->GetMeshID()] = mesh;
-    }
-
-    {
-        Mesh* mesh = new Mesh("sphere");
-        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "sphere.obj");
-        meshes[mesh->GetMeshID()] = mesh;
-    }
-
-    {
-        Mesh* mesh = new Mesh("bamboo");
-        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "vegetation", "bamboo"), "bamboo.obj");
-        meshes[mesh->GetMeshID()] = mesh;
-    }
-
-    // Create a simple quad
-    {
-        vector<glm::vec3> vertices
-        {
-            glm::vec3(0.5f,   0.5f, 0.0f),    // top right
-            glm::vec3(0.5f,  -0.5f, 0.0f),    // bottom right
-            glm::vec3(-0.5f, -0.5f, 0.0f),    // bottom left
-            glm::vec3(-0.5f,  0.5f, 0.0f),    // top left
-        };
-
-        vector<glm::vec3> normals
-        {
-            glm::vec3(0, 1, 1),
-            glm::vec3(1, 0, 1),
-            glm::vec3(1, 0, 0),
-            glm::vec3(0, 1, 0)
-        };
-
-        vector<glm::vec2> textureCoords
-        {
-            // TODO(student): Complete texture coordinates for the square
-            glm::vec2(0.0f, 0.0f),
-            glm::vec2(0.0f, 1.0f),
-            glm::vec2(1.0f, 1.0f),
-            glm::vec2(1.0f, 0.0f)
-
-        };
-
-        vector<unsigned int> indices =
-        {
-            0, 1, 3,
-            1, 2, 3
-        };
-
-        Mesh* mesh = new Mesh("square");
-        mesh->InitFromData(vertices, normals, textureCoords, indices);
-        meshes[mesh->GetMeshID()] = mesh;
-    }
-
-    // Create a shader program for drawing face polygon with the color of the normal
-    {
-        Shader *shader = new Shader("LabShader");
-        shader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "lab9", "shaders", "VertexShader.glsl"), GL_VERTEX_SHADER);
-        shader->AddShader(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "lab9", "shaders", "FragmentShader.glsl"), GL_FRAGMENT_SHADER);
-        shader->CreateAndLink();
-        shaders[shader->GetName()] = shader;
-    }
-
-    */
-
+    spotPos = glm::vec3(-0.38, 1.1, 0);
 
     // Create a simple quad for snow
     {
@@ -243,11 +145,6 @@ void Tema3::Init()
 
     translateX = translateY = translateZ = 0;
     timeY = timeX = 0;
-    //GetSceneCamera()->SetPosition(glm::vec3(0, 1, 3 * sqrt(3)));
-    //glm::vec3 eulerAngles = glm::vec3(RADIANS(-30), 0, 0);
-    //GetSceneCamera()->SetRotation(glm::quat(eulerAngles));
-    //GetSceneCamera()->m_transform->SetLocalPosition();
-    //GetSceneCamera()->m_transform->RotateLocalOX(RADIANS(-30));
     GetSceneCamera()->m_transform->SetWorldPosition(glm::vec3(0, 3, 10.0f/ sqrt(3)));
     GetSceneCamera()->m_transform->SetWorldRotation(glm::vec3(-40, 0, 0));
     GetSceneCamera()->Update();
@@ -257,12 +154,14 @@ void Tema3::Init()
     time = 0;
     last_time_object = 0;
     blocat = false;
+    blocat2 = false;
     material_kd = 0.3;
     material_ks = 0.3;
     material_shininess = 30;
 
     positions_objects.push_back(glm::vec3(-10, -10, -10));
     color_light_objects.push_back(glm::vec3(0, 0, 0));
+    pos_lighting_poles.push_back(glm::vec3(-10, -10, -10));
 
 }
 
@@ -282,63 +181,13 @@ void Tema3::FrameStart()
 void Tema3::Update(float deltaTimeSeconds)
 {
 
-    
-    /*// TODO(student): Choose an object and add a second texture to it.
-    // For example, for the sphere, you can have the "earth" texture
-    // and the "random" texture, and you will use the `mix` function
-    // in the fragment shader to mix these two textures.
-    //
-    // However, you may have the unpleasant surprise that the "random"
-    // texture now appears onto all objects in the scene, even though
-    // you are only passing the second texture for a single object!
-    // Why does this happen? How can you solve it?
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(1, 1, -3));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(2));
-        RenderSimpleMesh(meshes["sphere"], shaders["LabShader"], modelMatrix, mapTextures["earth"]);
-    }
-
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
-        modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
-        RenderSimpleMesh(meshes["box"], shaders["LabShader"], modelMatrix, mapTextures["crate"]);
-    }
-
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(-2, 0.5f, 0));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.75f));
-        modelMatrix = glm::rotate(modelMatrix, RADIANS(75.0f), glm::vec3(1, 1, 0));
-        RenderSimpleMesh(meshes["box"], shaders["LabShader"], modelMatrix, mapTextures["random"]);
-    }
-
-    {
-        quad = 1;
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(0.0f, 0.5f, 0.0f));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.5f));
-        RenderSimpleMesh(meshes["square"], shaders["LabShader"], modelMatrix, mapTextures["grass"], mapTextures["random"]);
-        quad = 0;
-    }
-
-    {
-        glm::mat4 modelMatrix = glm::mat4(1);
-        modelMatrix = glm::translate(modelMatrix, glm::vec3(-2, -0.5f, -3));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(0.1f));
-        RenderSimpleMesh(meshes["bamboo"], shaders["LabShader"], modelMatrix, mapTextures["bamboo"]);
-    }
-    */
     //Render snow
-    if (!blocat)
+    if (!blocat && !blocat2)
     {
         timeY += deltaTimeSeconds;
         translateZ += deltaTimeSeconds;
         time += deltaTimeSeconds;
     }
-
     if (time - last_time_object > timerNewObjects)
     {
         last_time_object = time;
@@ -515,8 +364,10 @@ void Tema3::Update(float deltaTimeSeconds)
 
     {// Render lighting_poles
         int i = 0;
-        for (glm::vec3 vec : pos_lighting_poles)
+        //for (glm::vec3 vec : pos_lighting_poles.)
+        for(int i = 1; i < pos_lighting_poles.size(); i++)
         {
+            glm::vec3 vec = pos_lighting_poles.at(i);
             if (translateZ - vec.z < 6.5 && fabs(translateX - vec.x) < 6.5)
             {
                 glm::mat4 modelMatrixPoles = glm::translate(glm::mat4(1),vec); 
@@ -534,9 +385,23 @@ void Tema3::Update(float deltaTimeSeconds)
             else
             {
                 pos_lighting_poles.erase(pos_lighting_poles.begin() + i);
+                i--;
             }
-            i++;
+          
         }
+    }
+
+    {// Testam spotu
+        glm::mat4 modelMatrixPoles = glm::translate(glm::mat4(1), pos_lighting_poles.at(0));
+        glm::mat4 modelMatrixPolesVert = glm::translate(modelMatrixPoles, glm::vec3(0, 0.5 * 1.25, 0)); // ridicam cu jum de latura * factor scalare
+        modelMatrixPolesVert = glm::scale(modelMatrixPolesVert, glm::vec3(0.15, 1.25, 0.15));
+        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesVert, mapTextures["greywood"]);
+
+        glm::mat4 modelMatrixPolesHoriz = glm::translate(modelMatrixPoles, glm::vec3(0, 1.25 + 0.075, 0)); // ridicam barna oriz cu cat are h cea verticala + jumatate din grosimea celei orizontale
+        modelMatrixPolesHoriz = glm::rotate(modelMatrixPolesHoriz, RADIANS(90), glm::vec3(0, 0, 1));
+        modelMatrixPolesHoriz = glm::scale(modelMatrixPolesHoriz, glm::vec3(0.15, 1, 0.15));
+        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesHoriz, mapTextures["greywood"]);
+
     }
 
     {// Intersection with gifts
@@ -631,35 +496,25 @@ void Tema3::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & model
     loc = glGetUniformLocation(shader->program, "N");
     glUniform1i(loc, positions_objects.size());
 
+    loc = glGetUniformLocation(shader->program, "pos_lighting");
+    glUniform3fv(loc, 150, glm::value_ptr(pos_lighting_poles.at(0)));
+
+    loc = glGetUniformLocation(shader->program, "M");
+    glUniform1i(loc, pos_lighting_poles.size());
+
     loc = glGetUniformLocation(shader->program, "colors");
     glUniform3fv(loc, 150, glm::value_ptr(color_light_objects.at(0)));
 
+    loc = glGetUniformLocation(shader->program, "spotPos");
+    glUniform3f(loc, spotPos.x, spotPos.y, spotPos.z);
+
     if (texture1)
     {
-        // TODO(student): Do these:
-        // - activate texture location 0
-        // - bind the texture1 ID
-        // - send theuniform value
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1->GetTextureID());
         glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 0);
 
     }
-
-   /* if (texture2)
-    {
-        // TODO(student): Do these:
-        // - activate texture location 1
-        // - bind the texture2 ID
-        // - send the uniform value
-
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2->GetTextureID());
-        glUniform1i(glGetUniformLocation(shader->program, "texture_1"), 1);
-
-    }
-    */
 
     // Draw the object
     glBindVertexArray(mesh->GetBuffers()->m_VAO);
@@ -730,49 +585,40 @@ void Tema3::OnInputUpdate(float deltaTime, int mods)
     }*/
     
     
+  
     if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        
         if (window->KeyHold(GLFW_KEY_A))
         {
-            //timeX -= deltaTime;
+            spotPos.x -= deltaTime;
         }
 
         if (window->KeyHold(GLFW_KEY_D))
         {
-            //timeX += deltaTime;
+            spotPos.x += deltaTime;
         }
-    }
-   /* float translateXNext = translateX;
-    bool stg = false;
-    int i = 0;
-    bool gasit = false;
-    for (glm::vec3 vec : pos_trees)
-    {
-        if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < scaleXBody + scaleTrunk)
-        {
-            gasit = true;
-        }
-    }
-    if (gasit)
-    {
-        blocat = true;
-    }
 
-    if (!gasit)
-    {
-        blocat = false;
-        translateX = translateXNext;
-        if (stg)
+        if (window->KeyHold(GLFW_KEY_W))
         {
-            timeX -= deltaTime;
+            spotPos.z -= deltaTime;
         }
-        else
+
+        if (window->KeyHold(GLFW_KEY_S))
         {
-            timeX += deltaTime;
+            spotPos.z += deltaTime;
+        }
+
+        if (window->KeyHold(GLFW_KEY_Q))
+        {
+            spotPos.y += deltaTime;
+        }
+
+        if (window->KeyHold(GLFW_KEY_E))
+        {
+            spotPos.y -= deltaTime;
         }
     }
-    */
+ 
 }
 
 
@@ -783,6 +629,10 @@ void Tema3::OnKeyPress(int key, int mods)
     if (key == GLFW_KEY_M)
     {
         autoCamera = !autoCamera;
+    }
+    if (key == GLFW_KEY_K)
+    {
+        blocat2 = !blocat2;
     }
 }
 
