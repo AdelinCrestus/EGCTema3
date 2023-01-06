@@ -15,6 +15,7 @@ uniform float material_kd;
 uniform float material_ks;
 uniform int material_shininess;
 uniform vec3 positions[150];
+uniform vec3 colors[150];
 uniform int N;
 
 // Output
@@ -35,9 +36,11 @@ float f(vec3 L,vec3 Light_Pos)
 
     float distance = distance(Light_Pos, world_position);
     float factorAtenuare = 1/pow(distance,2);
-
+    
     return factorAtenuare * (diffuse_light + specular_light);
 }
+
+
 
 
 void main()
@@ -46,13 +49,15 @@ void main()
     float ambient_light = 0.25;
     int i = 0;
     out_color = texture2D(texture_1, texcoord);
-    float culoareObiect = ambient_light;
-
+    float culoareObiect = ambient_light + f(vec3(0, -1, 0), world_position + vec3(0,1.5,0));
+    float culoareObiectpct = 0.0;
+    vec3 objcolor = vec3(0);
     for(i = 1 ; i < N; i++)
     {
-        culoareObiect += f(vec3(0, -1, 0), positions[i] + vec3(0,0.75,0));
+        culoareObiectpct = f(vec3(0, -1, 0), positions[i] + vec3(0,1,0));
+        objcolor += colors[i]*culoareObiectpct;
     }
-    out_color = out_color * culoareObiect;
+    out_color = out_color * culoareObiect + vec4(objcolor, 0);
     
 
 }

@@ -257,11 +257,12 @@ void Tema3::Init()
     time = 0;
     last_time_object = 0;
     blocat = false;
-    material_kd = 0.35;
-    material_ks = 0.5;
+    material_kd = 0.3;
+    material_ks = 0.3;
     material_shininess = 30;
 
     positions_objects.push_back(glm::vec3(-10, -10, -10));
+    color_light_objects.push_back(glm::vec3(0, 0, 0));
 
 }
 
@@ -364,6 +365,7 @@ void Tema3::Update(float deltaTimeSeconds)
         if (randomNumber % 4 < 2)
         {
             positions_objects.push_back(poz);
+            color_light_objects.push_back(glm::vec3(rand() % 71 / 100.0f, rand() % 71 / 100.0f, rand() % 71 / 100.0f));
         }
     }
     
@@ -475,6 +477,7 @@ void Tema3::Update(float deltaTimeSeconds)
                       if (vec == positions_objects.at(k))
                       {
                           positions_objects.erase(positions_objects.begin() + k);
+                          color_light_objects.erase(color_light_objects.begin() + k);
                       }
                   }
             }
@@ -502,6 +505,7 @@ void Tema3::Update(float deltaTimeSeconds)
                     if (vec == positions_objects.at(k))
                     {
                         positions_objects.erase(positions_objects.begin() + k);
+                        color_light_objects.erase(color_light_objects.begin() + k);
                     }
                 }
             }
@@ -547,6 +551,7 @@ void Tema3::Update(float deltaTimeSeconds)
                     if (vec == positions_objects.at(k))
                     {
                         positions_objects.erase(positions_objects.begin() + k);
+                        color_light_objects.erase(color_light_objects.begin() + k);
                     }
                 }
             }
@@ -571,7 +576,7 @@ void Tema3::Update(float deltaTimeSeconds)
 
 void Tema3::FrameEnd()
 {
-    DrawCoordinateSystem();
+    //DrawCoordinateSystem();
 }
 
 
@@ -624,8 +629,10 @@ void Tema3::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & model
     loc = glGetUniformLocation(shader->program, "positions");
     glUniform3fv(loc, 150, glm::value_ptr(positions_objects.at(0)));
     loc = glGetUniformLocation(shader->program, "N");
-    cout << positions_objects.size() << endl;
     glUniform1i(loc, positions_objects.size());
+
+    loc = glGetUniformLocation(shader->program, "colors");
+    glUniform3fv(loc, 150, glm::value_ptr(color_light_objects.at(0)));
 
     if (texture1)
     {
