@@ -71,6 +71,11 @@ namespace m1
         glm::vector<glm::vec3> color_light_objects;
         glm::vec3 spotPos;
         bool blocat2;
+        int lives;
+        glm::vec3 last_obj_pos;
+        glm::vec3 posUI;
+        bool afisat;
+        int score;
     };
 
 }   // namespace m1
