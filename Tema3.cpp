@@ -7,6 +7,8 @@
 using namespace std;
 using namespace m1;
 
+#define PI 3.14
+
 
 /*
  *  To find out more about `FrameStart`, `Update`, `FrameEnd`
@@ -31,7 +33,8 @@ void Tema3::Init()
     angularStepSkier = 0;
     timerNewObjects = 1;
     spotPos = glm::vec3(-0.38, 1.1, 0);
-
+    posUI = glm::vec3(-3.30894, -0.542119, 4.34235);
+    afisat = false;
     // Create a simple quad for snow
     {
     vector<glm::vec3> vertices
@@ -116,17 +119,57 @@ void Tema3::Init()
         mapTextures["leaves"] = texture;
     }
 
+    { //yeti texture
+        Texture2D* texture = new Texture2D();
+
+        texture->Load2D(PATH_JOIN(sourceTextureDir, "yeti_texture.jpg").c_str(), GL_REPEAT);
+        mapTextures["yeti"] = texture;
+    }
+
     { // Grey wood texture
         Texture2D* texture = new Texture2D();
         texture->Load2D(PATH_JOIN(sourceTextureDir, "greywood_texture.jpg").c_str(), GL_REPEAT);
         mapTextures["greywood"] = texture;
     }
 
+    { // Rocks texture
+        Texture2D* texture = new Texture2D();
+        texture->Load2D(PATH_JOIN(sourceTextureDir, "rocks_texture.jpeg").c_str(), GL_REPEAT);
+        mapTextures["rocks"] = texture;
+    }
+
     { //random texture
         Texture2D* texture = new Texture2D();
         texture = CreateRandomTexture(25, 25);
         mapTextures["random"] = texture;
+    }
 
+    {// Load sphere
+        Mesh* mesh = new Mesh("sphere");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, SOURCE_PATH::M1, "Tema3"), "sphere.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+
+    }
+
+    { //create ui
+        int points = 20;
+        int Raza = 1;
+        vector<VertexFormat> circle_Vertex;
+        circle_Vertex.push_back(VertexFormat(glm::vec3(0), glm::vec3(1, 0, 0)));
+        for (int i = 0; i <= points; i++)
+        {
+            circle_Vertex.push_back(VertexFormat(glm::vec3(Raza*  cos(2 * PI* i / points), 0, Raza*sin(2 * PI * i / points)), glm::vec3(1, 0, 0)));
+                
+        }
+        vector<unsigned int> circle_indices;
+        for (int i = 0; i <= points + 1; i++)
+        {
+            circle_indices.push_back(i);
+        }
+        Mesh* mesh = new Mesh("circle");
+        mesh->SetDrawMode(GL_TRIANGLE_FAN);
+        mesh->InitFromData(circle_Vertex, circle_indices);
+        meshes["circle"] = mesh;
     }
 
     scaleXBody = 0.2f;
@@ -163,6 +206,9 @@ void Tema3::Init()
     color_light_objects.push_back(glm::vec3(0, 0, 0));
     pos_lighting_poles.push_back(glm::vec3(-10, -10, -10));
 
+    lives = 3;
+    score = 0;
+
 }
 
 
@@ -182,12 +228,28 @@ void Tema3::Update(float deltaTimeSeconds)
 {
 
     //Render snow
+    if (lives <= 0)
+    {
+        blocat2 = true;
+    }
     if (!blocat && !blocat2)
     {
         timeY += deltaTimeSeconds;
         translateZ += deltaTimeSeconds;
         time += deltaTimeSeconds;
     }
+    if (blocat2)
+    {
+        angularStepSkier = 0;
+    }
+
+    if (blocat2 && !afisat)
+    {
+        afisat = true;
+        cout << "Your score: " << score << endl;
+        cout << "Press K to restart" << endl;
+    }
+
     if (time - last_time_object > timerNewObjects)
     {
         last_time_object = time;
@@ -236,7 +298,6 @@ void Tema3::Update(float deltaTimeSeconds)
     {
         float translateXNext = translateX;
         translateXNext += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
-        //timeX += cos(angularStepSkier - RADIANS(90)) * deltaTimeSeconds;
         if (translateX == 0)
         {
            angleGoDown = angleSlope;
@@ -251,16 +312,39 @@ void Tema3::Update(float deltaTimeSeconds)
         bool gasit = false;
         for (glm::vec3 vec : pos_trees)
         {
-            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody + scaleTrunk) * sqrt(2))
+            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody/2 + scaleTrunk/2) * sqrt(2))
             {
+                if (last_obj_pos != vec)
+                {
+                    lives--;
+                    last_obj_pos = vec;
+                }
                 gasit = true;
             }     
         }
 
         for (glm::vec3 vec : pos_lighting_poles)
         {
-            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody  + 0.15 ) * sqrt(2))
+            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody  + 0.15 ) * sqrt(2)/2)
             {
+                if (last_obj_pos != vec)
+                {
+                    lives--;
+                    last_obj_pos = vec;
+                }
+                gasit = true;
+            }
+        }
+
+        for (glm::vec3 vec : pos_rocks)
+        {
+            if (distance(glm::vec3(vec.x, 0, vec.z), glm::vec3(translateXNext, 0, translateZ)) < (scaleXBody + 0.5) * sqrt(2) / 2)
+            {
+                if (last_obj_pos != vec)
+                {
+                    lives--;
+                    last_obj_pos = vec;
+                }
                 gasit = true;
             }
         }
@@ -280,13 +364,12 @@ void Tema3::Update(float deltaTimeSeconds)
 
         glm::mat4 modelMatrixSkier = glm::translate(glm::mat4(1), glm::vec3(translateX, -translateZ * tan(angleSlope) + 0.18f, translateZ));
         modelMatrixSkier = glm::rotate(modelMatrixSkier, angularStepSkier, glm::vec3(0, 1, 0));
-        //modelMatrixSkier = glm::rotate(modelMatrixSkier,angleRotateDown, glm::vec3(0,0,1)) ;
         modelMatrixSkier = glm::rotate(modelMatrixSkier,angleSlope, glm::vec3(1,0,0)) ;
         modelMatrixSkier = glm::rotate(modelMatrixSkier, RADIANS(180), glm::vec3(0, 1, 0));
         glm::mat4 modelMatrixBody = glm::translate(modelMatrixSkier, glm::vec3(0, scaleYBody / 2, 0));
          modelMatrixBody = glm::scale(modelMatrixBody, glm::vec3(scaleXBody, scaleYBody, scaleZBody));
         
-        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixBody, mapTextures["romania"]);
+        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixBody, mapTextures["yeti"]);
 
         glm::mat4 modelMatrixSKIL = modelMatrixSkier;
         modelMatrixSKIL = glm::translate(modelMatrixSKIL, glm::vec3(-0.08f, 0.001f, -0.02f));
@@ -391,16 +474,21 @@ void Tema3::Update(float deltaTimeSeconds)
         }
     }
 
-    {// Testam spotu
-        glm::mat4 modelMatrixPoles = glm::translate(glm::mat4(1), pos_lighting_poles.at(0));
-        glm::mat4 modelMatrixPolesVert = glm::translate(modelMatrixPoles, glm::vec3(0, 0.5 * 1.25, 0)); // ridicam cu jum de latura * factor scalare
-        modelMatrixPolesVert = glm::scale(modelMatrixPolesVert, glm::vec3(0.15, 1.25, 0.15));
-        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesVert, mapTextures["greywood"]);
+    {//Render rocks
 
-        glm::mat4 modelMatrixPolesHoriz = glm::translate(modelMatrixPoles, glm::vec3(0, 1.25 + 0.075, 0)); // ridicam barna oriz cu cat are h cea verticala + jumatate din grosimea celei orizontale
-        modelMatrixPolesHoriz = glm::rotate(modelMatrixPolesHoriz, RADIANS(90), glm::vec3(0, 0, 1));
-        modelMatrixPolesHoriz = glm::scale(modelMatrixPolesHoriz, glm::vec3(0.15, 1, 0.15));
-        RenderSimpleMesh(meshes["box"], shaders["Tema3Shader"], modelMatrixPolesHoriz, mapTextures["greywood"]);
+        for (glm::vec3 vec : pos_rocks)
+        {
+            if (translateZ - vec.z < 6.5 && fabs(translateX - vec.x) < 6.5)
+            {
+                for (int i = -1; i <= 1; i++)
+                {
+                    glm::mat4 modelMatrixRocks = glm::translate(glm::mat4(1), vec);
+                    modelMatrixRocks = glm::translate(modelMatrixRocks, glm::vec3(0.2 * i, 0.125, 0)); // ridicam cu jum de raza si 
+                    modelMatrixRocks = glm::scale(modelMatrixRocks, glm::vec3(0.25, 0.25, 0.25)); //raza devine 0.25
+                    RenderSimpleMesh(meshes["sphere"], shaders["Tema3Shader"], modelMatrixRocks, mapTextures["rocks"]);
+                }
+            }
+        }
 
     }
 
@@ -408,9 +496,10 @@ void Tema3::Update(float deltaTimeSeconds)
         int i = 0;
         for (glm::vec3 vec : pos_gifts)
         {
-            if (distance(glm::vec3(translateX, 0, translateZ), glm::vec3(vec.x, 0, vec.z)) < scaleGift/2 + scaleXBody/2)
+            if (distance(glm::vec3(translateX, 0, translateZ), glm::vec3(vec.x, 0, vec.z)) < (scaleGift/2 + scaleXBody/2)*sqrt(2))
             {
                 pos_gifts.erase(pos_gifts.begin() + i);
+                score += 50;
                 for (int k = 1; k < positions_objects.size(); k++)
                 {
                     if (vec == positions_objects.at(k))
@@ -424,15 +513,26 @@ void Tema3::Update(float deltaTimeSeconds)
         }
     }
 
+    {//Render ui
+        for (int i = 0; i < lives; i++)
+        {
+            glm::mat4 modelMatrixUI = glm::translate(glm::mat4(1), posUI + glm::vec3(0.25 * i, 0, 0));
+            modelMatrixUI = glm::translate(modelMatrixUI, glm::vec3(translateX, translateY, translateZ));
+            modelMatrixUI = glm::rotate(modelMatrixUI, angleSlope, glm::vec3(1, 0, 0));
+            modelMatrixUI = glm::scale(modelMatrixUI, glm::vec3(0.1, 0.1, 0.1));
+            RenderMesh(meshes["circle"], shaders["VertexColor"], modelMatrixUI);
+        }
+    }
+
       
     if (autoCamera)
     {
-        GetSceneCamera()->m_transform->Move(glm::vec3(-lastX + translateX, -lastY + translateY, -lastZ + translateZ));
+        GetSceneCamera()->m_transform->Move(glm::vec3(-lastX + translateX, -lastY + translateY, -lastZ + translateZ)); 
         GetSceneCamera()->Update();
     }
-    lastZ = translateZ;
-    lastX = translateX;
-    lastY = translateY;
+    lastZ = translateZ;// retinem ca sa stim cu cat deplasam camera 
+    lastX = translateX;//
+    lastY = translateY;//
 
     
     
@@ -576,49 +676,8 @@ Texture2D* Tema3::CreateRandomTexture(unsigned int width, unsigned int height)
 
 void Tema3::OnInputUpdate(float deltaTime, int mods)
 {
-    /*if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
-    {
-        glm::vec3 up = glm::vec3(0, 1, 0);
-        glm::vec3 right = GetSceneCamera()->m_transform->GetLocalOXVector();
-        glm::vec3 forward = GetSceneCamera()->m_transform->GetLocalOZVector();
-        forward = glm::normalize(glm::vec3(forward.x, 0, forward.z));
-    }*/
-    
-    
-  
-    if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
-    {
-        if (window->KeyHold(GLFW_KEY_A))
-        {
-            spotPos.x -= deltaTime;
-        }
-
-        if (window->KeyHold(GLFW_KEY_D))
-        {
-            spotPos.x += deltaTime;
-        }
-
-        if (window->KeyHold(GLFW_KEY_W))
-        {
-            spotPos.z -= deltaTime;
-        }
-
-        if (window->KeyHold(GLFW_KEY_S))
-        {
-            spotPos.z += deltaTime;
-        }
-
-        if (window->KeyHold(GLFW_KEY_Q))
-        {
-            spotPos.y += deltaTime;
-        }
-
-        if (window->KeyHold(GLFW_KEY_E))
-        {
-            spotPos.y -= deltaTime;
-        }
-    }
  
+     
 }
 
 
@@ -632,7 +691,7 @@ void Tema3::OnKeyPress(int key, int mods)
     }
     if (key == GLFW_KEY_K)
     {
-        blocat2 = !blocat2;
+        Init();
     }
 }
 
@@ -646,25 +705,28 @@ void Tema3::OnKeyRelease(int key, int mods)
 void Tema3::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 {
     // Add mouse move event
-    if ( mouseY >   resolution.y / 4)
-    {
-        float tg_X = -mouseX + resolution.x / 2;
-        float tg_Y = -resolution.y / 4 + mouseY;
-        angularStepSkier = -atan(tg_X / tg_Y);
-    }
-    else
-    {
-        angularStepSkier = 0;
-    }
+   
+        if (mouseY > resolution.y / 4)
+        {
+            float tg_X = -mouseX + resolution.x / 2;
+            float tg_Y = -resolution.y / 4 + mouseY;
+            angularStepSkier = -atan(tg_X / tg_Y);
+        }
+        else
+        {
+            angularStepSkier = 0;
+        }
 
-    if (angularStepSkier > RADIANS(60))
-    {
-        angularStepSkier = RADIANS(60);
-    }
-    else if (angularStepSkier < RADIANS(-60))
-    {
-        angularStepSkier = RADIANS(-60);
-    }
+        if (angularStepSkier > RADIANS(60))
+        {
+            angularStepSkier = RADIANS(60);
+        }
+        else if (angularStepSkier < RADIANS(-60))
+        {
+            angularStepSkier = RADIANS(-60);
+        }
+    
+   
 
 }
 
